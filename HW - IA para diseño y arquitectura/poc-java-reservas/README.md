@@ -158,11 +158,11 @@ stateDiagram-v2
 
 ### UI Screenshots
 
-[Landing](./Landing.png)
-[Sign in page](./Sign%20in%20page.png)
-[Room search](./Room%20search.png)
-[Room details](./Room%20details.png)
-[Booking confirmation](./Booking%20confirmation.png)
+![Landing](./Landing.png)
+![Sign in page](./Sign%20in%20page.png)
+![Room search](./Room%20search.png)
+![Room details](./Room%20details.png)
+![Booking confirmation](./Booking%20confirmation.png)
 
 ## 7. Tecnologías y Justificación
 - **Spring Boot**: Rapidez para exponer REST y empaquetar microservicios independientes.
