@@ -79,3 +79,56 @@ Para poder realizar esta tarea en su computadora personal, los estudiantes deben
   * [pytest](https://docs.pytest.org/) y [pytest-asyncio](https://pypi.org/project/pytest-asyncio/) → Pruebas automatizadas.
   * [respx](https://pypi.org/project/respx/) → Mock de peticiones HTTP en pruebas.
   * [OpenAI SDK para Python](https://pypi.org/project/openai/) → Integración con el modelo de lenguaje.
+
+---
+
+## ▶️ Cómo ejecutar el chatbot
+
+1) Crear y activar entorno virtual:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+2) Instalar dependencias:
+
+```bash
+pip install -r requirements.txt
+```
+
+3) Configurar variables de entorno: copie `.env.example` a `.env` y complete sus claves.
+
+```bash
+copy .env.example .env
+# Editar .env y agregar SERPER_API_KEY y OPENAI_API_KEY
+```
+
+4) Ejecutar desde consola:
+
+```bash
+python run_chatbot.py
+```
+
+El chatbot mantiene la memoria durante la sesión, decide con function calling si debe buscar en internet (Serper.dev) y muestra el progreso de fuentes procesadas. La respuesta del LLM se transmite en streaming y al final se listan las referencias.
+
+## 🧪 Ejecutar pruebas
+
+```bash
+pytest -q
+```
+
+Las pruebas cubren:
+- Búsqueda (Serper) y parseo de resultados.
+- Extracción de texto (scraper) con callback de progreso.
+- Orquestación del flujo en consola con un `FakeLLM`.
+
+## Estructura del proyecto
+
+- src/chatbot/config.py → carga de configuración (.env)
+- src/chatbot/search.py → integración Serper (httpx)
+- src/chatbot/scrape.py → extracción con trafilatura
+- src/chatbot/llm.py → adapter OpenAI con function calling y streaming
+- src/chatbot/console.py → REPL de consola con Rich y memoria
+- run_chatbot.py → punto de entrada
+- tests/ → pruebas con pytest, pytest-asyncio, respx
