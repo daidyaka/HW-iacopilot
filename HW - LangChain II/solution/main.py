@@ -7,11 +7,12 @@ from langchain.agents import AgentExecutor, create_react_agent
 from langchain import hub
 
 from dotenv import load_dotenv, find_dotenv
+import sys
 
 _ = load_dotenv(find_dotenv())  # read local .env file
 
 
-llm = ChatOpenAI(model="gpt-4-0125-preview")
+llm = ChatOpenAI(model="gpt-4o-mini")
 
 embeddings_model_name = "sentence-transformers/all-MiniLM-L6-v2"
 embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
@@ -21,28 +22,28 @@ db = FAISS.load_local(
     embeddings,
     allow_dangerous_deserialization=True,
 )
-retriever = db.as_retriever(k=1)
-
-from langchain.agents import tool
+retriever = db.as_retriever(k=2)
 
 
 @tool
 def get_balance_by_id(cedula_id: str) -> str:
-    """Obtiene balance de la cuenta by cedula_id."""
+    """Obtiene balance de la cuenta por cedula_id (CSV)."""
     import pandas as pd
-
     df = pd.read_csv("../data/saldos.csv")
-    return df[df["ID_Cedula"] == cedula_id]["Balance"].values[0]
+    matches = df[df["ID_Cedula"] == cedula_id]
+    if matches.empty:
+        return "No se encontró balance para esa cédula."
+    return str(matches["Balance"].values[0])
 
 
 @tool
 def get_bank_information(question: str) -> str:
-    """Obtiene informacion general del banco sobre tramites de cuentas de ahorros, tarjetas de credito y transferencias."""
+    """Información bancaria vía RAG (FAISS + KB)."""
     bank_info_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
         retriever=retriever,
-        verbose=True,
+        verbose=False,
     )
     response = bank_info_chain.invoke({"query": question})
     return response["result"]
@@ -51,23 +52,29 @@ def get_bank_information(question: str) -> str:
 tools = [get_balance_by_id, get_bank_information]
 
 
-agent = create_react_agent(llm, tools, prompt=hub.pull("hwchase17/react"))
-agent_executor = AgentExecutor(agent=agent, tools=tools)
+def build_agent_executor():
+    agent = create_react_agent(llm, tools, prompt=hub.pull("hwchase17/react"))
+    return AgentExecutor(agent=agent, tools=tools)
 
 
-result = agent_executor.invoke({"input": "hi"})
+def main():
+    agent_executor = build_agent_executor()
+    print("Sistema de Atención al Cliente listo. Escribe tu pregunta (Ctrl+C para salir).")
+    try:
+        while True:
+            inp = input("› ")
+            result = agent_executor.invoke({"input": inp})
+            print("\nRespuesta:\n" + str(result.get("output", result)) + "\n")
+    except KeyboardInterrupt:
+        print("\nHasta luego!")
 
-result = agent_executor.invoke(
-    {"input": "Como abro una cuenta de ahorros en el banco?"}
-)
-# result = agent_executor.invoke(
-#     {"input": "Como puedo obtener una tarjeta de credito?"},
-# )
-# result = agent_executor.invoke(
-#     {"input": "Cual es el balance de la cuenta de la cedula V-91827364?"}
-# )
-# result = agent_executor.invoke(
-#     {"input": "Cual es el sentido de la vida?"},
-# )
 
-print(result["output"])
+if __name__ == "__main__":
+    # Allow one-off question via CLI args
+    if len(sys.argv) > 1:
+        agent_executor = build_agent_executor()
+        question = " ".join(sys.argv[1:])
+        result = agent_executor.invoke({"input": question})
+        print(result.get("output", result))
+    else:
+        main()
